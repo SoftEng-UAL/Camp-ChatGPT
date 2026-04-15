@@ -1,0 +1,794 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Camp Management — Sprint 1 Prototype</title>
+  <style>
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; margin: 0; background: #f6f7fb; }
+    header { background: #111827; color: white; padding: 14px 18px; }
+    header .row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+    header h1 { font-size: 16px; margin: 0; font-weight: 600; }
+    header .status { font-size: 12px; opacity: 0.9; }
+    main { padding: 18px; max-width: 1100px; margin: 0 auto; }
+    .grid { display: grid; grid-template-columns: 1fr; gap: 14px; }
+    @media (min-width: 900px) { .grid { grid-template-columns: 1fr 1fr; } }
+    .card { background: white; border-radius: 12px; padding: 14px; box-shadow: 0 1px 2px rgba(0,0,0,0.06); border: 1px solid rgba(0,0,0,0.06); }
+    .card h2 { margin: 0 0 10px; font-size: 14px; }
+    label { display: block; font-size: 12px; margin: 10px 0 6px; color: #374151; }
+    input, select, textarea { width: 100%; padding: 9px 10px; border: 1px solid #d1d5db; border-radius: 10px; background: #fff; font-size: 13px; box-sizing: border-box; }
+    textarea { min-height: 72px; resize: vertical; }
+    button { padding: 9px 10px; border: 0; border-radius: 10px; background: #2563eb; color: white; cursor: pointer; font-weight: 600; font-size: 13px; }
+    button.secondary { background: #6b7280; }
+    button.danger { background: #dc2626; }
+    .row { display: flex; gap: 10px; align-items: center; }
+    .row > * { flex: 1; }
+    .row.tight > * { flex: initial; }
+    .muted { color: #6b7280; font-size: 12px; }
+    .pill { display: inline-flex; align-items: center; gap: 6px; padding: 4px 8px; border-radius: 999px; font-size: 12px; background: #eef2ff; color: #3730a3; }
+    .pill.admin { background: #ecfeff; color: #155e75; }
+    .pill.parent { background: #fef3c7; color: #92400e; }
+    .kvs { display: grid; grid-template-columns: 140px 1fr; gap: 6px 12px; font-size: 12px; }
+    .kvs div { padding: 2px 0; }
+    .kvs .k { color: #6b7280; }
+    table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    th, td { text-align: left; padding: 8px 6px; border-bottom: 1px solid #e5e7eb; vertical-align: top; }
+    th { color: #374151; font-weight: 700; }
+    .notice { padding: 10px 12px; border-radius: 10px; background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; font-size: 12px; }
+    .ok { background: #ecfdf5; color: #065f46; border: 1px solid #a7f3d0; }
+    .toolbar { display:flex; gap:10px; align-items:center; justify-content: space-between; }
+    .toolbar .left { display:flex; gap:10px; align-items:center; }
+    .small { font-size: 12px; }
+    code { background: #f3f4f6; padding: 2px 5px; border-radius: 6px; }
+  </style>
+</head>
+<body>
+<header>
+  <div class="row">
+    <h1>Camp Management — Sprint 1 Prototype</h1>
+    <div class="status" id="status">Not logged in</div>
+  </div>
+</header>
+
+<main>
+  <div class="card">
+    <div class="toolbar">
+      <div class="left">
+        <span class="pill" id="rolePill" style="display:none;"></span>
+        <span class="muted" id="meLine"></span>
+      </div>
+      <div class="row tight">
+        <button class="secondary" id="btnLogout" style="display:none;">Logout</button>
+      </div>
+    </div>
+    <div class="muted" style="margin-top:8px;">
+      API docs: <a href="/api/docs" target="_blank">/api/docs</a> • Default admin: <code>admin@camp.local</code> / <code>admin1234</code>
+    </div>
+    <div id="msg" style="margin-top:12px; display:none;" class="notice"></div>
+  </div>
+
+  <div class="grid" style="margin-top:14px;">
+    <!-- AUTH -->
+    <div class="card" id="cardAuth">
+      <h2>Parent Registration / Login</h2>
+
+      <div class="row">
+        <div>
+          <label>Email</label>
+          <input id="authEmail" placeholder="parent@example.com" />
+        </div>
+        <div>
+          <label>Password</label>
+          <input id="authPassword" type="password" placeholder="••••••" />
+        </div>
+      </div>
+
+      <label>Full name (registration only)</label>
+      <input id="authFullName" placeholder="Jane Parent" />
+
+      <div class="row" style="margin-top:12px;">
+        <button id="btnRegister">Register (Parent)</button>
+        <button class="secondary" id="btnLogin">Login</button>
+      </div>
+
+      <div class="muted" style="margin-top:10px;">
+        Tip: To access Admin features, login with the default admin above.
+      </div>
+    </div>
+
+    <!-- PARENT: CHILDREN -->
+    <div class="card" id="cardParentChildren" style="display:none;">
+      <h2>Parent — Add Child & List Children</h2>
+
+      <div class="row">
+        <div>
+          <label>First name</label>
+          <input id="childFirst" />
+        </div>
+        <div>
+          <label>Last name</label>
+          <input id="childLast" />
+        </div>
+      </div>
+
+      <div class="row">
+        <div>
+          <label>Date of birth (optional)</label>
+          <input id="childDob" placeholder="YYYY-MM-DD" />
+        </div>
+        <div>
+          <label>Emergency info (optional)</label>
+          <input id="childEmergency" placeholder="Allergy: peanuts; Phone: ..." />
+        </div>
+      </div>
+
+      <div class="row" style="margin-top:12px;">
+        <button id="btnAddChild">Add Child</button>
+        <button class="secondary" id="btnRefreshChildren">Refresh</button>
+      </div>
+
+      <div style="margin-top:12px;">
+        <div class="muted">Your children (for enrollment & schedule):</div>
+        <table style="margin-top:8px;">
+          <thead>
+            <tr><th>ID</th><th>Name</th><th>DOB</th></tr>
+          </thead>
+          <tbody id="childrenTbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- PARENT: ENROLLMENT -->
+    <div class="card" id="cardParentEnroll" style="display:none;">
+      <h2>Parent — Enrollment (Camp Year)</h2>
+
+      <div class="row">
+        <div>
+          <label>Camper</label>
+          <select id="enrollCamper"></select>
+        </div>
+        <div>
+          <label>Camp year</label>
+          <input id="enrollYear" value="2026" />
+        </div>
+      </div>
+
+      <div class="row" style="margin-top:12px;">
+        <button id="btnEnroll">Enroll</button>
+        <button class="secondary" id="btnRefreshEnrollments">Refresh</button>
+      </div>
+
+      <div style="margin-top:12px;">
+        <div class="muted">Your enrollments:</div>
+        <table style="margin-top:8px;">
+          <thead>
+            <tr><th>ID</th><th>Camper</th><th>Year</th><th>Status</th><th>Notes</th><th>Action</th></tr>
+          </thead>
+          <tbody id="enrollmentsTbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- PARENT: SCHEDULE -->
+    <div class="card" id="cardParentSchedule" style="display:none;">
+      <h2>Parent — Schedule</h2>
+
+      <div class="row">
+        <div>
+          <label>Filter by camper (optional)</label>
+          <select id="scheduleCamper">
+            <option value="">(All my campers)</option>
+          </select>
+        </div>
+        <div>
+          <label>Camp year (optional)</label>
+          <input id="scheduleYear" placeholder="2026" />
+        </div>
+      </div>
+
+      <div class="row" style="margin-top:12px;">
+        <button id="btnLoadSchedule">Load schedule</button>
+      </div>
+
+      <div style="margin-top:12px;">
+        <div class="muted">Events for your campers (via group membership):</div>
+        <table style="margin-top:8px;">
+          <thead>
+            <tr><th>Camper</th><th>Group</th><th>Title</th><th>Start</th><th>End</th><th>Location</th></tr>
+          </thead>
+          <tbody id="scheduleTbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ADMIN: CREATE PARENT -->
+    <div class="card" id="cardAdminParent" style="display:none;">
+      <h2>Admin — Create Parent</h2>
+
+      <label>Email</label>
+      <input id="adminParentEmail" placeholder="parent2@example.com" />
+      <label>Password</label>
+      <input id="adminParentPassword" type="password" placeholder="min 6 chars" />
+      <label>Full name</label>
+      <input id="adminParentName" placeholder="Parent Two" />
+
+      <div class="row" style="margin-top:12px;">
+        <button id="btnAdminCreateParent">Create Parent</button>
+      </div>
+
+      <div class="muted" style="margin-top:10px;">
+        This implements the admin story “add parents so they can enroll their kids”.
+      </div>
+    </div>
+
+    <!-- ADMIN: CREATE CAMPER -->
+    <div class="card" id="cardAdminCamper" style="display:none;">
+      <h2>Admin — Create Camper & List Campers</h2>
+
+      <div class="row">
+        <div>
+          <label>First name</label>
+          <input id="adminCamperFirst" />
+        </div>
+        <div>
+          <label>Last name</label>
+          <input id="adminCamperLast" />
+        </div>
+      </div>
+      <div class="row">
+        <div>
+          <label>DOB (optional)</label>
+          <input id="adminCamperDob" placeholder="YYYY-MM-DD" />
+        </div>
+        <div>
+          <label>Emergency info (optional)</label>
+          <input id="adminCamperEmergency" placeholder="Allergy: ..." />
+        </div>
+      </div>
+
+      <div class="row" style="margin-top:12px;">
+        <button id="btnAdminCreateCamper">Create Camper</button>
+        <button class="secondary" id="btnAdminRefreshCampers">Refresh</button>
+      </div>
+
+      <table style="margin-top:12px;">
+        <thead>
+          <tr><th>ID</th><th>Name</th><th>DOB</th></tr>
+        </thead>
+        <tbody id="adminCampersTbody"></tbody>
+      </table>
+    </div>
+
+    <!-- ADMIN: GROUPS -->
+    <div class="card" id="cardAdminGroups" style="display:none;">
+      <h2>Admin — Groups & Membership</h2>
+
+      <div class="row">
+        <div>
+          <label>Camp year</label>
+          <input id="adminGroupYear" value="2026" />
+        </div>
+        <div>
+          <label>Group name</label>
+          <input id="adminGroupName" placeholder="Group A" />
+        </div>
+      </div>
+      <label>Description (optional)</label>
+      <input id="adminGroupDesc" placeholder="Age 8-10" />
+
+      <div class="row" style="margin-top:12px;">
+        <button id="btnAdminCreateGroup">Create Group</button>
+        <button class="secondary" id="btnAdminRefreshGroups">Refresh Groups</button>
+      </div>
+
+      <div style="margin-top:12px;">
+        <div class="row">
+          <div>
+            <label>Select group</label>
+            <select id="adminSelectGroup"></select>
+          </div>
+          <div>
+            <label>Add camper by ID</label>
+            <input id="adminMemberCamperId" placeholder="e.g., 1" />
+          </div>
+        </div>
+        <div class="row" style="margin-top:12px;">
+          <button id="btnAdminAddMember">Add to Group</button>
+        </div>
+      </div>
+
+      <div class="muted" style="margin-top:10px;">
+        This implements “create groups and add campers to groups”.
+      </div>
+    </div>
+
+    <!-- ADMIN: EVENTS -->
+    <div class="card" id="cardAdminEvents" style="display:none;">
+      <h2>Admin — Schedule Events</h2>
+
+      <div class="row">
+        <div>
+          <label>Group</label>
+          <select id="adminEventGroup"></select>
+        </div>
+        <div>
+          <label>Title</label>
+          <input id="adminEventTitle" placeholder="Swimming" />
+        </div>
+      </div>
+
+      <div class="row">
+        <div>
+          <label>Start (ISO)</label>
+          <input id="adminEventStart" placeholder="2026-07-01T09:00:00Z" />
+        </div>
+        <div>
+          <label>End (ISO)</label>
+          <input id="adminEventEnd" placeholder="2026-07-01T10:00:00Z" />
+        </div>
+      </div>
+
+      <div class="row">
+        <div>
+          <label>Location (optional)</label>
+          <input id="adminEventLocation" placeholder="Pool" />
+        </div>
+        <div>
+          <label>Description (optional)</label>
+          <input id="adminEventDesc" placeholder="Bring sunscreen" />
+        </div>
+      </div>
+
+      <div class="row" style="margin-top:12px;">
+        <button id="btnAdminCreateEvent">Create Event</button>
+        <button class="secondary" id="btnAdminRefreshEvents">Refresh Events</button>
+      </div>
+
+      <div style="margin-top:12px;">
+        <div class="row">
+          <div>
+            <label>Filter by group</label>
+            <select id="adminFilterGroup">
+              <option value="">(All groups)</option>
+            </select>
+          </div>
+          <div>
+            <label>Filter by camp year</label>
+            <input id="adminFilterYear" placeholder="2026" />
+          </div>
+        </div>
+        <div class="row" style="margin-top:12px;">
+          <button class="secondary" id="btnAdminApplyEventFilter">Apply filter</button>
+        </div>
+      </div>
+
+      <table style="margin-top:12px;">
+        <thead>
+          <tr><th>Group</th><th>Title</th><th>Start</th><th>End</th><th>Location</th></tr>
+        </thead>
+        <tbody id="adminEventsTbody"></tbody>
+      </table>
+
+      <div class="muted" style="margin-top:10px;">
+        This implements scheduling + “see only events for a specific group” filtering.
+      </div>
+    </div>
+  </div>
+</main>
+
+<script>
+  const API = "/api";
+  let token = localStorage.getItem("token") || null;
+  let me = null;
+
+  function showMsg(text, ok=false) {
+    const el = document.getElementById("msg");
+    el.style.display = "block";
+    el.textContent = text;
+    el.className = "notice" + (ok ? " ok" : "");
+  }
+  function clearMsg() {
+    const el = document.getElementById("msg");
+    el.style.display = "none";
+    el.textContent = "";
+  }
+
+  async function apiFetch(path, opts={}) {
+    const headers = opts.headers || {};
+    headers["Content-Type"] = "application/json";
+    if (token) headers["Authorization"] = "Bearer " + token;
+    const res = await fetch(API + path, { ...opts, headers });
+    const txt = await res.text();
+    let data = null;
+    try { data = txt ? JSON.parse(txt) : null; } catch { data = txt; }
+    if (!res.ok) {
+      const detail = (data && data.detail) ? data.detail : (typeof data === "string" ? data : "Request failed");
+      throw new Error(detail);
+    }
+    return data;
+  }
+
+  function setLoggedOutUI() {
+    document.getElementById("status").textContent = "Not logged in";
+    document.getElementById("btnLogout").style.display = "none";
+    document.getElementById("rolePill").style.display = "none";
+    document.getElementById("meLine").textContent = "";
+    document.getElementById("cardAuth").style.display = "block";
+    // hide all role cards
+    ["cardParentChildren","cardParentEnroll","cardParentSchedule","cardAdminParent","cardAdminCamper","cardAdminGroups","cardAdminEvents"]
+      .forEach(id => document.getElementById(id).style.display = "none");
+  }
+
+  function setLoggedInUI() {
+    document.getElementById("status").textContent = "Logged in";
+    document.getElementById("btnLogout").style.display = "inline-block";
+    const pill = document.getElementById("rolePill");
+    pill.style.display = "inline-flex";
+    pill.textContent = me.role.toUpperCase();
+    pill.className = "pill " + me.role;
+
+    document.getElementById("meLine").textContent = `${me.full_name} • ${me.email}`;
+
+    document.getElementById("cardAuth").style.display = "none";
+
+    if (me.role === "parent") {
+      document.getElementById("cardParentChildren").style.display = "block";
+      document.getElementById("cardParentEnroll").style.display = "block";
+      document.getElementById("cardParentSchedule").style.display = "block";
+      document.getElementById("cardAdminParent").style.display = "none";
+      document.getElementById("cardAdminCamper").style.display = "none";
+      document.getElementById("cardAdminGroups").style.display = "none";
+      document.getElementById("cardAdminEvents").style.display = "none";
+      refreshChildren();
+      refreshEnrollments();
+    } else if (me.role === "admin") {
+      document.getElementById("cardParentChildren").style.display = "none";
+      document.getElementById("cardParentEnroll").style.display = "none";
+      document.getElementById("cardParentSchedule").style.display = "none";
+      document.getElementById("cardAdminParent").style.display = "block";
+      document.getElementById("cardAdminCamper").style.display = "block";
+      document.getElementById("cardAdminGroups").style.display = "block";
+      document.getElementById("cardAdminEvents").style.display = "block";
+      refreshAdminCampers();
+      refreshAdminGroups();
+      refreshAdminEvents();
+    }
+  }
+
+  async function loadMe() {
+    if (!token) { me = null; setLoggedOutUI(); return; }
+    try {
+      me = await apiFetch("/auth/me");
+      clearMsg();
+      setLoggedInUI();
+    } catch (e) {
+      token = null;
+      localStorage.removeItem("token");
+      me = null;
+      showMsg("Session expired. Please login again.");
+      setLoggedOutUI();
+    }
+  }
+
+  // -------- AUTH actions --------
+  document.getElementById("btnRegister").onclick = async () => {
+    clearMsg();
+    try {
+      const email = document.getElementById("authEmail").value.trim();
+      const password = document.getElementById("authPassword").value;
+      const full_name = document.getElementById("authFullName").value.trim();
+      await apiFetch("/auth/register-parent", { method:"POST", body: JSON.stringify({ email, password, full_name }) });
+      showMsg("Registered successfully. Now click Login.", true);
+    } catch (e) { showMsg(e.message); }
+  };
+
+  document.getElementById("btnLogin").onclick = async () => {
+    clearMsg();
+    try {
+      const email = document.getElementById("authEmail").value.trim();
+      const password = document.getElementById("authPassword").value;
+      const data = await apiFetch("/auth/login", { method:"POST", body: JSON.stringify({ email, password }) });
+      token = data.access_token;
+      localStorage.setItem("token", token);
+      await loadMe();
+      showMsg("Logged in.", true);
+    } catch (e) { showMsg(e.message); }
+  };
+
+  document.getElementById("btnLogout").onclick = () => {
+    token = null;
+    me = null;
+    localStorage.removeItem("token");
+    showMsg("Logged out.", true);
+    setLoggedOutUI();
+  };
+
+  // -------- Parent: Children --------
+  async function refreshChildren() {
+    try {
+      const links = await apiFetch("/parent/campers");
+      const tbody = document.getElementById("childrenTbody");
+      tbody.innerHTML = "";
+      const enrollSel = document.getElementById("enrollCamper");
+      const schedSel = document.getElementById("scheduleCamper");
+      enrollSel.innerHTML = "";
+      schedSel.innerHTML = '<option value="">(All my campers)</option>';
+
+      for (const l of links) {
+        const c = l.camper;
+        const tr = document.createElement("tr");
+        tr.innerHTML = `<td>${c.id}</td><td>${c.first_name} ${c.last_name}</td><td>${c.date_of_birth || ""}</td>`;
+        tbody.appendChild(tr);
+
+        const opt = document.createElement("option");
+        opt.value = c.id;
+        opt.textContent = `${c.id} — ${c.first_name} ${c.last_name}`;
+        enrollSel.appendChild(opt);
+
+        const opt2 = document.createElement("option");
+        opt2.value = c.id;
+        opt2.textContent = `${c.id} — ${c.first_name} ${c.last_name}`;
+        schedSel.appendChild(opt2);
+      }
+    } catch (e) { showMsg(e.message); }
+  }
+
+  document.getElementById("btnAddChild").onclick = async () => {
+    clearMsg();
+    try {
+      const first_name = document.getElementById("childFirst").value.trim();
+      const last_name = document.getElementById("childLast").value.trim();
+      const date_of_birth = document.getElementById("childDob").value.trim() || null;
+      const emergency_info = document.getElementById("childEmergency").value.trim() || null;
+      await apiFetch("/parent/campers", { method:"POST", body: JSON.stringify({ first_name, last_name, date_of_birth, emergency_info }) });
+      showMsg("Child added.", true);
+      document.getElementById("childFirst").value = "";
+      document.getElementById("childLast").value = "";
+      document.getElementById("childDob").value = "";
+      document.getElementById("childEmergency").value = "";
+      refreshChildren();
+    } catch (e) { showMsg(e.message); }
+  };
+
+  document.getElementById("btnRefreshChildren").onclick = refreshChildren;
+
+  // -------- Parent: Enrollment --------
+  async function refreshEnrollments() {
+    try {
+      const rows = await apiFetch("/parent/enrollments");
+      const tbody = document.getElementById("enrollmentsTbody");
+      tbody.innerHTML = "";
+      for (const r of rows) {
+        const tr = document.createElement("tr");
+        const camper = r.camper;
+        tr.innerHTML = `
+          <td>${r.id}</td>
+          <td>${camper.first_name} ${camper.last_name} (#${camper.id})</td>
+          <td>${r.camp_year.year}</td>
+          <td>${r.status}</td>
+          <td>${r.notes || ""}</td>
+          <td>
+            <button class="danger" data-id="${r.id}">Withdraw</button>
+          </td>`;
+        tbody.appendChild(tr);
+      }
+      tbody.querySelectorAll("button.danger").forEach(btn => {
+        btn.onclick = async () => {
+          clearMsg();
+          try {
+            const id = btn.getAttribute("data-id");
+            await apiFetch(`/parent/enrollments/${id}`, { method:"PUT", body: JSON.stringify({ status:"withdrawn", notes:"Withdrawn by parent" }) });
+            showMsg("Enrollment withdrawn.", true);
+            refreshEnrollments();
+          } catch (e) { showMsg(e.message); }
+        };
+      });
+      refreshChildren(); // keep dropdowns in sync
+    } catch (e) { showMsg(e.message); }
+  }
+
+  document.getElementById("btnEnroll").onclick = async () => {
+    clearMsg();
+    try {
+      const camper_id = parseInt(document.getElementById("enrollCamper").value, 10);
+      const camp_year = parseInt(document.getElementById("enrollYear").value, 10);
+      await apiFetch("/parent/enrollments", { method:"POST", body: JSON.stringify({ camper_id, camp_year }) });
+      showMsg("Enrollment created (pending).", true);
+      refreshEnrollments();
+    } catch (e) { showMsg(e.message); }
+  };
+  document.getElementById("btnRefreshEnrollments").onclick = refreshEnrollments;
+
+  // -------- Parent: Schedule --------
+  document.getElementById("btnLoadSchedule").onclick = async () => {
+    clearMsg();
+    try {
+      const camperId = document.getElementById("scheduleCamper").value;
+      const year = document.getElementById("scheduleYear").value.trim();
+      const qs = new URLSearchParams();
+      if (camperId) qs.set("camper_id", camperId);
+      if (year) qs.set("camp_year", year);
+      const items = await apiFetch("/parent/schedule" + (qs.toString() ? ("?" + qs.toString()) : ""));
+      const tbody = document.getElementById("scheduleTbody");
+      tbody.innerHTML = "";
+      for (const it of items) {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${it.camper_name} (#${it.camper_id})</td>
+          <td>${it.group_name} (#${it.group_id})</td>
+          <td>${it.title}</td>
+          <td>${new Date(it.start_time).toLocaleString()}</td>
+          <td>${new Date(it.end_time).toLocaleString()}</td>
+          <td>${it.location || ""}</td>
+        `;
+        tbody.appendChild(tr);
+      }
+      showMsg(`Loaded ${items.length} schedule item(s).`, true);
+    } catch (e) { showMsg(e.message); }
+  };
+
+  // -------- Admin: Parents --------
+  document.getElementById("btnAdminCreateParent").onclick = async () => {
+    clearMsg();
+    try {
+      const email = document.getElementById("adminParentEmail").value.trim();
+      const password = document.getElementById("adminParentPassword").value;
+      const full_name = document.getElementById("adminParentName").value.trim();
+      await apiFetch("/admin/parents", { method:"POST", body: JSON.stringify({ email, password, full_name }) });
+      showMsg("Parent created.", true);
+      document.getElementById("adminParentEmail").value = "";
+      document.getElementById("adminParentPassword").value = "";
+      document.getElementById("adminParentName").value = "";
+    } catch (e) { showMsg(e.message); }
+  };
+
+  // -------- Admin: Campers --------
+  async function refreshAdminCampers() {
+    try {
+      const campers = await apiFetch("/admin/campers");
+      const tbody = document.getElementById("adminCampersTbody");
+      tbody.innerHTML = "";
+      for (const c of campers) {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `<td>${c.id}</td><td>${c.first_name} ${c.last_name}</td><td>${c.date_of_birth || ""}</td>`;
+        tbody.appendChild(tr);
+      }
+    } catch (e) { showMsg(e.message); }
+  }
+
+  document.getElementById("btnAdminCreateCamper").onclick = async () => {
+    clearMsg();
+    try {
+      const first_name = document.getElementById("adminCamperFirst").value.trim();
+      const last_name = document.getElementById("adminCamperLast").value.trim();
+      const date_of_birth = document.getElementById("adminCamperDob").value.trim() || null;
+      const emergency_info = document.getElementById("adminCamperEmergency").value.trim() || null;
+      await apiFetch("/admin/campers", { method:"POST", body: JSON.stringify({ first_name, last_name, date_of_birth, emergency_info }) });
+      showMsg("Camper created.", true);
+      document.getElementById("adminCamperFirst").value = "";
+      document.getElementById("adminCamperLast").value = "";
+      document.getElementById("adminCamperDob").value = "";
+      document.getElementById("adminCamperEmergency").value = "";
+      refreshAdminCampers();
+    } catch (e) { showMsg(e.message); }
+  };
+  document.getElementById("btnAdminRefreshCampers").onclick = refreshAdminCampers;
+
+  // -------- Admin: Groups --------
+  async function refreshAdminGroups() {
+    try {
+      const groups = await apiFetch("/admin/groups");
+      const sel = document.getElementById("adminSelectGroup");
+      const evSel = document.getElementById("adminEventGroup");
+      const filterSel = document.getElementById("adminFilterGroup");
+      sel.innerHTML = "";
+      evSel.innerHTML = "";
+      filterSel.innerHTML = '<option value="">(All groups)</option>';
+
+      for (const g of groups) {
+        const opt = document.createElement("option");
+        opt.value = g.id;
+        opt.textContent = `${g.id} — ${g.name} (Year ${g.camp_year.year})`;
+        sel.appendChild(opt);
+
+        const opt2 = document.createElement("option");
+        opt2.value = g.id;
+        opt2.textContent = `${g.id} — ${g.name}`;
+        evSel.appendChild(opt2);
+
+        const opt3 = document.createElement("option");
+        opt3.value = g.id;
+        opt3.textContent = `${g.id} — ${g.name}`;
+        filterSel.appendChild(opt3);
+      }
+    } catch (e) { showMsg(e.message); }
+  }
+
+  document.getElementById("btnAdminCreateGroup").onclick = async () => {
+    clearMsg();
+    try {
+      const camp_year = parseInt(document.getElementById("adminGroupYear").value, 10);
+      const name = document.getElementById("adminGroupName").value.trim();
+      const description = document.getElementById("adminGroupDesc").value.trim() || null;
+      await apiFetch("/admin/groups", { method:"POST", body: JSON.stringify({ camp_year, name, description }) });
+      showMsg("Group created.", true);
+      document.getElementById("adminGroupName").value = "";
+      document.getElementById("adminGroupDesc").value = "";
+      refreshAdminGroups();
+    } catch (e) { showMsg(e.message); }
+  };
+  document.getElementById("btnAdminRefreshGroups").onclick = refreshAdminGroups;
+
+  document.getElementById("btnAdminAddMember").onclick = async () => {
+    clearMsg();
+    try {
+      const group_id = parseInt(document.getElementById("adminSelectGroup").value, 10);
+      const camper_id = parseInt(document.getElementById("adminMemberCamperId").value, 10);
+      await apiFetch(`/admin/groups/${group_id}/members`, { method:"POST", body: JSON.stringify({ camper_id }) });
+      showMsg("Camper added to group.", true);
+      document.getElementById("adminMemberCamperId").value = "";
+    } catch (e) { showMsg(e.message); }
+  };
+
+  // -------- Admin: Events --------
+  async function refreshAdminEvents(groupId=null, year=null) {
+    try {
+      const qs = new URLSearchParams();
+      if (groupId) qs.set("group_id", groupId);
+      if (year) qs.set("camp_year", year);
+      const events = await apiFetch("/admin/events" + (qs.toString() ? ("?" + qs.toString()) : ""));
+      const tbody = document.getElementById("adminEventsTbody");
+      tbody.innerHTML = "";
+      // We'll need group name map quickly
+      const groups = await apiFetch("/admin/groups");
+      const gmap = {};
+      for (const g of groups) gmap[g.id] = g.name;
+
+      for (const ev of events) {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${gmap[ev.group_id] || ("#" + ev.group_id)}</td>
+          <td>${ev.title}</td>
+          <td>${new Date(ev.start_time).toLocaleString()}</td>
+          <td>${new Date(ev.end_time).toLocaleString()}</td>
+          <td>${ev.location || ""}</td>
+        `;
+        tbody.appendChild(tr);
+      }
+    } catch (e) { showMsg(e.message); }
+  }
+
+  document.getElementById("btnAdminCreateEvent").onclick = async () => {
+    clearMsg();
+    try {
+      const group_id = parseInt(document.getElementById("adminEventGroup").value, 10);
+      const title = document.getElementById("adminEventTitle").value.trim();
+      const start_time = document.getElementById("adminEventStart").value.trim();
+      const end_time = document.getElementById("adminEventEnd").value.trim();
+      const location = document.getElementById("adminEventLocation").value.trim() || null;
+      const description = document.getElementById("adminEventDesc").value.trim() || null;
+
+      await apiFetch("/admin/events", { method:"POST", body: JSON.stringify({ group_id, title, description, location, start_time, end_time }) });
+      showMsg("Event created.", true);
+      document.getElementById("adminEventTitle").value = "";
+      document.getElementById("adminEventStart").value = "";
+      document.getElementById("adminEventEnd").value = "";
+      document.getElementById("adminEventLocation").value = "";
+      document.getElementById("adminEventDesc").value = "";
+      refreshAdminEvents();
+    } catch (e) { showMsg(e.message); }
+  };
+
+  document.getElementById("btnAdminRefreshEvents").onclick = () => refreshAdminEvents();
+
+  document.getElementById("btnAdminApplyEventFilter").onclick = () => {
+    const group_id = document.getElementById("adminFilterGroup").value || null;
+    const year = document.getElementById("adminFilterYear").value.trim() || null;
+    refreshAdminEvents(group_id, year);
+  };
+
+  // initial load
+  loadMe();
+</script>
+</body>
+</html>

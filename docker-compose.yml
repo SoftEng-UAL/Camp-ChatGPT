@@ -1,0 +1,42 @@
+version: '3.8'
+
+services:
+  # 1. DATABASE (PostgreSQL)
+  db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: database
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U user -d database"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  # 2. BACKEND API (FastAPI)
+  backend:
+    build: ./backend
+    restart: always
+    environment:
+      - DATABASE_URL=postgresql://user:password@db:5432/database
+      - APP_SEED_ADMIN_EMAIL=admin@camp.local
+      - APP_SEED_ADMIN_PASSWORD=admin1234
+      - APP_SEED_CAMP_YEAR=2026
+      - APP_TOKEN_TTL_MINUTES=720
+    depends_on:
+      db:
+        condition: service_healthy
+
+  # 3. FRONTEND (Nginx + Static UI)
+  frontend:
+    build: ./frontend
+    ports:
+      - "80:80"  
+    depends_on:
+      - backend
+
+volumes:
+  pgdata:
